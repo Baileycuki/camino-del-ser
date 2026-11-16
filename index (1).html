@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>El Camino del Ser</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#edf0f5;
+  --surface:#ffffff;
+  --ink:#1b2236;
+  --muted:#596276;
+  --line:#d3d9e4;
+  --accent:#a8232b;
+  --c1:#a8232b; --c2:#d9731c; --c3:#b8901a; --c4:#7a48bf; --c5:#2c68c9; --c6:#2b8f55;
+  --display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --body:"Source Sans 3", "Segoe UI", system-ui, sans-serif;
+  color-scheme: light;
+  /* layout: intro + player setup, then a serpentine 6x5 board on the left and the turn panel on the right */
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.5}
+button,input{font:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--c5);outline-offset:2px}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;line-height:1.1}
+.wrap{max-width:1180px;margin:0 auto;padding:24px 20px 48px}
+.hidden{display:none !important}
+
+/* ---------- intro ---------- */
+.intro{display:grid;grid-template-columns:1.25fr 1fr;gap:28px;align-items:start}
+.brand{display:flex;flex-direction:column;gap:18px}
+.kicker{font-size:.85rem;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);font-weight:700}
+.brand h1{font-size:clamp(2.4rem,5vw,3.8rem);font-weight:800}
+.quote{font-family:var(--display);font-size:1.45rem;font-weight:700;border-left:5px solid var(--accent);padding:6px 0 6px 16px;margin:0}
+.quote small{display:block;font-family:var(--body);font-size:.95rem;font-weight:400;color:var(--muted);margin-top:4px}
+.brand p{margin:0;max-width:62ch}
+.cats-legend{display:flex;flex-wrap:wrap;gap:8px}
+.chip{display:inline-flex;align-items:center;gap:6px;font-size:.88rem;font-weight:600;padding:4px 10px;border-radius:999px;background:var(--surface);border:1px solid var(--line)}
+.chip i{width:11px;height:11px;border-radius:50%;display:inline-block}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:22px;display:flex;flex-direction:column;gap:14px}
+.panel h2{font-size:1.35rem}
+.rules{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px;font-size:.96rem}
+.field{display:flex;flex-direction:column;gap:4px}
+.field label{font-size:.85rem;font-weight:600;color:var(--muted)}
+.field input{padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:#f8f9fc}
+.players-form{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.btn{border:0;border-radius:10px;padding:12px 18px;font-weight:700;background:var(--ink);color:#fff}
+.btn.accent{background:var(--accent)}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.err{color:var(--accent);font-size:.9rem;min-height:1.2em;margin:0}
+
+/* ---------- game ---------- */
+.game{display:grid;grid-template-columns:1.55fr 1fr;gap:22px;align-items:start}
+.topbar{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+.topbar h1{font-size:1.7rem;font-weight:800}
+.board{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:10px}
+.sq{position:relative;aspect-ratio:1/0.82;border-radius:9px;padding:6px 7px;display:flex;flex-direction:column;justify-content:space-between;color:#fff;overflow:hidden}
+.sq .n{font-family:var(--display);font-weight:800;font-size:.95rem;opacity:.9}
+.sq .lbl{font-size:.72rem;font-weight:700;line-height:1.15}
+.sq.special{background:#fff;color:var(--ink);border:2px dashed var(--line)}
+.sq.start{background:var(--ink)}
+.sq.meta{background:linear-gradient(135deg,var(--c1),var(--c4) 60%,var(--c5))}
+.pieces{position:absolute;right:5px;top:5px;display:flex;flex-wrap:wrap;gap:3px;max-width:60%;justify-content:flex-end}
+.piece{width:22px;height:22px;border-radius:50%;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.35);font-size:.68rem;font-weight:800;color:#fff;display:flex;align-items:center;justify-content:center}
+.side{display:flex;flex-direction:column;gap:14px}
+.turn{display:flex;align-items:center;gap:14px}
+.turn .who{font-family:var(--display);font-size:1.3rem;font-weight:800}
+.turn .sub{font-size:.9rem;color:var(--muted)}
+.die{width:74px;height:74px;border-radius:14px;background:#fff;border:2px solid var(--ink);display:grid;grid-template:repeat(3,1fr)/repeat(3,1fr);padding:9px;flex:none}
+.die span{width:12px;height:12px;border-radius:50%;background:var(--ink);place-self:center;visibility:hidden}
+.die span.on{visibility:visible}
+.die.rolling{animation:shake .12s linear infinite}
+@keyframes shake{0%{transform:rotate(-8deg)}50%{transform:rotate(8deg)}100%{transform:rotate(-8deg)}}
+.log{font-size:.95rem;background:#f6f7fa;border-radius:8px;padding:10px 12px;margin:0;min-height:3.2em}
+.score{display:flex;flex-direction:column;gap:8px}
+.prow{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:8px 10px;border-radius:10px;border:1px solid var(--line)}
+.prow.active{border-color:var(--ink);box-shadow:inset 4px 0 0 var(--ink)}
+.prow .nm{font-weight:700}
+.prow .pts{font-family:var(--display);font-weight:800;font-size:1.2rem;font-variant-numeric:tabular-nums}
+.tokens{display:flex;gap:4px;margin-top:2px}
+.tokens i{width:12px;height:12px;border-radius:50%;border:2px solid;display:inline-block}
+.muted{color:var(--muted);font-size:.88rem;margin:0}
+
+/* ---------- modal ---------- */
+.overlay{position:fixed;inset:0;background:rgba(18,22,36,.55);display:flex;align-items:center;justify-content:center;padding:16px;z-index:10}
+.card{background:var(--surface);border-radius:16px;max-width:560px;width:100%;max-height:92vh;overflow:auto;box-shadow:0 20px 50px rgba(0,0,0,.3)}
+.card .head{padding:14px 20px;color:#fff;display:flex;justify-content:space-between;align-items:center;gap:10px}
+.card .head h3{font-size:1.1rem}
+.card .head span{font-size:.82rem;font-weight:700;background:rgba(255,255,255,.22);padding:3px 9px;border-radius:999px}
+.card .body{padding:20px;display:flex;flex-direction:column;gap:14px}
+.card .q{font-family:var(--display);font-size:1.3rem;font-weight:700;margin:0}
+.opts{display:flex;flex-direction:column;gap:8px}
+.opt{text-align:left;padding:11px 14px;border-radius:10px;border:2px solid var(--line);background:#fff;color:var(--ink)}
+.opt:hover:not(:disabled){border-color:var(--ink)}
+.opt.ok{border-color:var(--c6);background:#e9f6ee}
+.opt.bad{border-color:var(--c1);background:#fbeaea}
+.opt:disabled{cursor:default}
+.feedback{margin:0;padding:12px 14px;border-radius:10px;background:#f4f6fa;font-size:.97rem}
+.feedback b{display:block;margin-bottom:2px}
+.actions{display:flex;gap:10px;flex-wrap:wrap}
+.final-list{display:flex;flex-direction:column;gap:8px}
+.gift{border:2px dashed var(--accent);border-radius:14px;padding:18px;text-align:center;display:flex;flex-direction:column;gap:8px}
+.gift .big{font-family:var(--display);font-size:1.5rem;font-weight:800;color:var(--accent)}
+
+@media (max-width:860px){
+  .intro,.game{grid-template-columns:1fr}
+  .sq .lbl{font-size:.62rem}
+  .piece{width:18px;height:18px;font-size:.6rem}
+}
+@media (max-width:420px){
+  .players-form{grid-template-columns:1fr}
+  .board{gap:4px;padding:6px}
+  .sq{padding:4px}
+  .sq .lbl{display:none}
+}
+@media (prefers-reduced-motion:reduce){
+  .die.rolling{animation:none}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- ===== Intro y registro ===== -->
+  <section id="intro" class="intro">
+    <div class="brand">
+      <span class="kicker">Proyecto integrador · Comprensión Integral del Ser Humano · ARU</span>
+      <h1>El Camino del Ser</h1>
+      <p class="quote">“En todo amar y servir”<small>San Ignacio de Loyola</small></p>
+      <p><b>Introducción.</b> Este juego de mesa digital repasa los temas que vimos en la materia: las raíces ignacianas y la filosofía, las dimensiones del ser humano, la persona y su personalidad, la diversidad y el género, la espiritualidad y la muerte, y la vida en sociedad. La idea es aprender jugando y, al mismo tiempo, reflexionar sobre nosotros mismos.</p>
+      <p><b>Qué representa.</b> El tablero es el camino de la vida. Cada color es una dimensión de la persona y nadie llega a la meta, el proyecto de vida, desarrollando solo una. Por eso, además de los puntos, se premia a quien junta fichas de más dimensiones: así se ve que la formación es integral.</p>
+      <div class="cats-legend" id="legend"></div>
+    </div>
+
+    <form class="panel" id="setup" novalidate>
+      <h2>Cómo se juega</h2>
+      <ol class="rules">
+        <li>Juegan de 2 a 4 personas por turnos en la misma pantalla.</li>
+        <li>Tira el dado y avanza. Si caes en un color, sale una tarjeta de ese tema.</li>
+        <li><b>Pregunta:</b> si aciertas ganas 2 puntos y la ficha de ese color. Si fallas, retrocedes 1 casilla.</li>
+        <li><b>Reflexión:</b> responde en voz alta. Si el grupo cree que tu respuesta fue sincera y completa, ganas 2 puntos y la ficha.</li>
+        <li><b>Magis</b> te adelanta 2 casillas y <b>Tropiezo</b> te regresa 2.</li>
+        <li>Cuando alguien llega a la meta termina el juego. Se suman 3 puntos por llegar y 1 por cada ficha de color distinta.</li>
+      </ol>
+      <div class="players-form">
+        <div class="field"><label for="p1">Jugador 1</label><input id="p1" maxlength="16" value="Jugador 1"></div>
+        <div class="field"><label for="p2">Jugador 2</label><input id="p2" maxlength="16" value="Jugador 2"></div>
+        <div class="field"><label for="p3">Jugador 3 (opcional)</label><input id="p3" maxlength="16" placeholder="Nombre"></div>
+        <div class="field"><label for="p4">Jugador 4 (opcional)</label><input id="p4" maxlength="16" placeholder="Nombre"></div>
+      </div>
+      <p class="err" id="err" aria-live="polite"></p>
+      <button class="btn accent" type="submit">Empezar partida</button>
+    </form>
+  </section>
+
+  <!-- ===== Juego ===== -->
+  <section id="game" class="hidden">
+    <div class="topbar">
+      <h1>El Camino del Ser</h1>
+      <button class="btn ghost" id="restart" type="button">Nueva partida</button>
+    </div>
+    <div class="game">
+      <div class="board" id="board" aria-label="Tablero"></div>
+      <div class="side">
+        <div class="panel">
+          <div class="turn">
+            <div class="die" id="die" aria-hidden="true"></div>
+            <div>
+              <div class="sub">Turno de</div>
+              <div class="who" id="who"></div>
+            </div>
+          </div>
+          <button class="btn accent" id="roll" type="button">Tirar dado</button>
+          <p class="log" id="log" aria-live="polite">Tira el dado para empezar.</p>
+        </div>
+        <div class="panel">
+          <h2>Marcador</h2>
+          <div class="score" id="score"></div>
+          <p class="muted">Los círculos son las fichas de cada dimensión que has ganado.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div class="overlay hidden" id="overlay" role="dialog" aria-modal="true">
+  <div class="card" id="card"></div>
+</div>
+
+<script>
+const CATS = [
+  { short:"Raíces", name:"Raíces ignacianas y filosofía", color:"#a8232b", cards:[
+    {q:"¿Quién fundó la Compañía de Jesús?", o:["San Francisco Javier","San Ignacio de Loyola","Pedro Arrupe","San Francisco de Asís"], a:1, e:"San Ignacio de Loyola la fundó junto con sus compañeros y fue aprobada en 1540."},
+    {q:"¿Cuáles son los pasos del Paradigma Pedagógico Ignaciano?", o:["Leer, memorizar, repetir y examinar","Contexto, experiencia, reflexión, acción y evaluación","Observar, medir, comparar y concluir","Planear, ejecutar y entregar"], a:1, e:"El paradigma parte del contexto de la persona y la lleva de la experiencia a la reflexión y a la acción, para luego evaluar."},
+    {q:"¿Qué significa el “magis” ignaciano?", o:["Tener más cosas que los demás","Buscar siempre dar lo mejor de uno para servir más","Ser el primero del grupo","Estudiar más horas"], a:1, e:"Magis es “más” en latín: no se trata de competir, sino de dar lo mejor de uno mismo al servicio de los demás."},
+    {q:"La “cura personalis” se refiere a…", o:["El cuidado de la persona completa","Un tratamiento médico","Una oración diaria","La disciplina escolar"], a:0, e:"Es el cuidado de cada persona en todas sus dimensiones, no solo en lo académico."},
+    {q:"¿Qué filósofo dijo que el ser humano es un fin en sí mismo y nunca debe usarse solo como medio?", o:["Platón","Descartes","Kant","Aristóteles"], a:2, e:"Para Kant el ser humano tiene dignidad, no precio. Esta idea es base de los derechos humanos."},
+    {q:"Para Platón, el ser humano es…", o:["Un alma que vive en un cuerpo, como en una cárcel","Una máquina sin alma","Solo materia","Un animal sin razón"], a:0, e:"Platón era dualista: la verdadera identidad está en el alma, y el cuerpo la limita."},
+    {q:"¿Qué es Capeltic?", o:["Una marca de ropa","Un proyecto de café de cooperativas indígenas de Chiapas ligado a la Ibero","Un programa de becas","Una app de la universidad"], a:1, e:"Capeltic vende café de productores tseltales de Chiapas con un modelo de comercio justo."},
+    {r:true, q:"¿Qué valor ignaciano te gustaría aplicar en tu carrera y por qué?"},
+    {r:true, q:"Si pudieras platicar con Platón, Aristóteles, Descartes o Kant, ¿con quién sería y qué le preguntarías?"}
+  ]},
+  { short:"Ser humano", name:"Cómo se es humano", color:"#d9731c", cards:[
+    {q:"¿Cuál de estas NO es una de las ocho dimensiones del ser humano?", o:["Estética","Comunicativa","Económica","Corporal"], a:2, e:"Las ocho son ética, espiritual, cognitiva, afectiva, comunicativa, estética, corporal y sociopolítica."},
+    {q:"La dimensión estética tiene que ver con…", o:["La capacidad de apreciar y crear belleza","El cuidado de la piel","Las reglas sociales","Los números"], a:0, e:"Es la sensibilidad para apreciar el arte, la naturaleza y la belleza, y para expresarse de forma creativa."},
+    {q:"La dimensión afectiva se relaciona con…", o:["El razonamiento lógico","Las emociones, los sentimientos y los vínculos","La salud física","La participación política"], a:1, e:"Abarca cómo sentimos, cómo manejamos emociones y cómo nos relacionamos con los demás."},
+    {q:"La dimensión cognitiva es la capacidad de…", o:["Conocer, razonar y aprender","Hacer ejercicio","Rezar","Votar"], a:0, e:"Tiene que ver con el pensamiento, la comprensión y el aprendizaje."},
+    {q:"¿Qué significa “formación integral”?", o:["Sacar buenas calificaciones","Desarrollar todas las dimensiones de la persona de forma equilibrada","Estudiar dos carreras","Hacer mucho deporte"], a:1, e:"Formar a la persona completa y no solo en una área."},
+    {r:true, q:"¿Qué dimensión sientes más desarrollada en ti y cuál te gustaría trabajar más?"},
+    {r:true, q:"Menciona una actividad que hagas para tu dimensión corporal y cómo te ayuda en otras áreas de tu vida."}
+  ]},
+  { short:"Persona", name:"Dimensión individual, talentos y personalidad", color:"#b8901a", cards:[
+    {q:"¿Cuántos tipos de personalidad tiene el eneagrama?", o:["4","7","9","12"], a:2, e:"El eneagrama describe nueve tipos, representados en una estrella de nueve puntas."},
+    {q:"En el eneagrama, el tipo 2 se conoce como…", o:["El perfeccionista","El ayudador","El investigador","El pacificador"], a:1, e:"El tipo 2 se enfoca en ayudar y ser necesario para los demás."},
+    {q:"¿Cuáles son las cuatro virtudes cardinales?", o:["Fe, esperanza, caridad y humildad","Prudencia, justicia, fortaleza y templanza","Honestidad, puntualidad, respeto y orden","Valor, fuerza, poder y gloria"], a:1, e:"Vienen de la filosofía griega y fueron retomadas por la tradición cristiana."},
+    {q:"Para Aristóteles, la virtud es…", o:["Un don que no se puede aprender","El término medio entre dos extremos","Hacer siempre lo que uno quiere","Obedecer sin pensar"], a:1, e:"Por ejemplo, la valentía está entre la cobardía y la imprudencia. Se adquiere con la práctica."},
+    {q:"¿Cuál es la diferencia entre un talento y una virtud?", o:["Son lo mismo","El talento es una capacidad que se desarrolla; la virtud es un hábito bueno que se forma con la práctica","La virtud se hereda y el talento no","El talento solo sirve en el arte"], a:1, e:"Un talento puede usarse bien o mal; la virtud orienta a usarlo para el bien."},
+    {q:"La dimensión individual se enfoca en…", o:["Conocerse a sí mismo, la identidad y la autoestima","Las leyes del país","La economía familiar","La vida en grupo"], a:0, e:"El autoconocimiento es la base para construir un proyecto de vida."},
+    {r:true, q:"Comparte un talento tuyo y cómo podrías usarlo para ayudar a otros."},
+    {r:true, q:"¿Con qué tipo del eneagrama te identificas más y por qué?"}
+  ]},
+  { short:"Género", name:"Diversidad sexo-genérica y masculinidades", color:"#7a48bf", cards:[
+    {q:"¿Cuál es la diferencia entre sexo y género?", o:["No hay diferencia","El sexo es biológico y el género es una construcción social y cultural","El género es biológico y el sexo es cultural","El sexo depende de la ropa"], a:1, e:"El género son los roles y expectativas que cada sociedad asigna a hombres y mujeres."},
+    {q:"La orientación sexual se refiere a…", o:["La forma de vestir","La atracción emocional, afectiva o sexual hacia otras personas","El sexo con el que se nace","La identidad legal"], a:1, e:"Es distinta de la identidad de género, que es cómo cada persona vive su propio género."},
+    {q:"La identidad de género es…", o:["La vivencia interna que cada persona tiene de su género","Lo que dice el acta de nacimiento","La orientación sexual","Una moda"], a:0, e:"Puede o no coincidir con el sexo asignado al nacer."},
+    {q:"¿Cuál de estas conductas es violencia psicológica?", o:["Insultar, humillar o controlar a la pareja","Ayudar en las tareas de la casa","Pedir una opinión","Respetar los espacios del otro"], a:0, e:"La violencia psicológica no deja marcas visibles, pero daña la autoestima y la libertad de la persona."},
+    {q:"¿Qué proponen las “nuevas masculinidades”?", o:["Que los hombres no muestren emociones","Que los hombres expresen emociones, cuiden a otros y rechacen la violencia","Que los hombres no trabajen","Que todo siga igual"], a:1, e:"Cuestionan el modelo tradicional que asocia ser hombre con dureza, control y violencia."},
+    {q:"¿Cuál es un ejemplo de mandato tradicional de masculinidad?", o:["“Los hombres no lloran”","“Todos merecen respeto”","“Hay que cuidar la salud”","“Pedir ayuda es válido”"], a:0, e:"Estos mandatos limitan la vida emocional de los hombres y pueden llevar a la violencia."},
+    {r:true, q:"¿Qué idea tradicional sobre “ser hombre” o “ser mujer” crees que ya no tiene sentido hoy?"},
+    {r:true, q:"¿Qué podemos hacer como estudiantes para prevenir la violencia de género?"}
+  ]},
+  { short:"Espíritu", name:"Espiritualidad y muerte", color:"#2c68c9", cards:[
+    {q:"¿Cuál es la diferencia entre espiritualidad y religión?", o:["Son lo mismo","La espiritualidad es la búsqueda de sentido y conexión, y puede vivirse dentro o fuera de una religión","La religión no tiene nada espiritual","La espiritualidad solo existe en las iglesias"], a:1, e:"La religión es una forma organizada de vivir la espiritualidad, pero no la única."},
+    {q:"¿Cuáles son las etapas del duelo según Elisabeth Kübler-Ross?", o:["Tristeza, enojo y olvido","Negación, ira, negociación, depresión y aceptación","Llanto, silencio y paz","Miedo, culpa y perdón"], a:1, e:"No siempre se viven en ese orden ni todas, pero ayudan a entender el proceso de pérdida."},
+    {q:"¿Quién escribió los Ejercicios Espirituales?", o:["Santa Teresa de Ávila","San Ignacio de Loyola","San Agustín","Pedro Arrupe"], a:1, e:"Son una guía de oración y discernimiento que sigue siendo la base de la espiritualidad jesuita."},
+    {q:"Para Heidegger, ser conscientes de la muerte…", o:["No tiene importancia","Nos ayuda a vivir de forma más auténtica","Solo causa miedo","Es algo que hay que evitar pensar"], a:1, e:"Heidegger habla del ser humano como “ser-para-la-muerte”: saber que la vida termina le da sentido a cómo la vivimos."},
+    {q:"¿Qué organismo reconoció al Día de Muertos como Patrimonio Cultural Inmaterial de la Humanidad?", o:["La OMS","La UNESCO","La OEA","El Banco Mundial"], a:1, e:"Es una forma muy mexicana de recordar y honrar a quienes ya partieron."},
+    {r:true, q:"¿Qué le da sentido a tu vida o te ayuda a seguir en momentos difíciles?"},
+    {r:true, q:"¿Cómo te gustaría ser recordado o recordada?"}
+  ]},
+  { short:"Sociedad", name:"Dimensión social, ética y sociopolítica", color:"#2b8f55", cards:[
+    {q:"Aristóteles decía que el ser humano es un “animal político”. ¿Qué quería decir?", o:["Que a todos les gusta la política","Que es social por naturaleza y se realiza en comunidad","Que debe ser gobernado","Que los animales votan"], a:1, e:"Para Aristóteles nadie se desarrolla plenamente aislado de los demás."},
+    {q:"La socialización primaria ocurre principalmente en…", o:["La escuela","La familia","El trabajo","Las redes sociales"], a:1, e:"En la familia aprendemos el lenguaje, los primeros valores y la forma de relacionarnos."},
+    {q:"¿Quién dijo que debemos ser “hombres y mujeres para los demás”?", o:["Pedro Arrupe","Kant","Platón","Descartes"], a:0, e:"Pedro Arrupe, superior general de los jesuitas, lo dijo en 1973 y se volvió lema de la educación jesuita."},
+    {q:"El bien común es…", o:["Lo que le conviene a la mayoría aunque dañe a otros","El conjunto de condiciones que permiten que todas las personas se desarrollen","Lo que decide el gobierno","El dinero público"], a:1, e:"Busca el bienestar de todos, sin dejar fuera a nadie."},
+    {q:"¿Cuál es la diferencia entre ética y moral?", o:["Son exactamente lo mismo","La moral son las normas y costumbres de una sociedad; la ética reflexiona sobre ellas","La ética es religiosa y la moral no","La moral es solo para adultos"], a:1, e:"La ética nos ayuda a preguntarnos si lo que “siempre se ha hecho” es realmente correcto."},
+    {q:"La dimensión sociopolítica implica…", o:["Ser político de profesión","Participar y comprometerse con la comunidad para transformarla","Opinar en redes sociales","No meterse en problemas"], a:1, e:"Es asumir que también somos responsables de lo que pasa a nuestro alrededor."},
+    {r:true, q:"¿Qué problema de tu comunidad te gustaría ayudar a resolver y cómo empezarías?"},
+    {r:true, q:"Cuenta una situación en la que tuviste que decidir entre lo fácil y lo correcto."}
+  ]}
+];
+
+const PLAYER_COLORS = ["#1b2236","#d63a83","#0a9396","#8a5a2b"];
+const LAST = 29;
+const SPECIAL = {7:"magis", 13:"tropiezo", 19:"magis", 25:"tropiezo"};
+const squares = [];
+(function buildSquares(){
+  let ci = 0;
+  for (let i = 0; i <= LAST; i++){
+    if (i === 0) squares.push({type:"start"});
+    else if (i === LAST) squares.push({type:"meta"});
+    else if (SPECIAL[i]) squares.push({type:SPECIAL[i]});
+    else { squares.push({type:"cat", cat: ci % CATS.length}); ci++; }
+  }
+})();
+
+const $ = id => document.getElementById(id);
+const state = { players:[], cur:0, busy:false, over:false, decks:[] };
+
+function shuffle(arr){ const a = arr.slice(); for (let i = a.length - 1; i > 0; i--){ const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+function draw(cat){
+  if (!state.decks[cat] || !state.decks[cat].length) state.decks[cat] = shuffle(CATS[cat].cards);
+  return state.decks[cat].pop();
+}
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+function esc(s){ return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+
+/* ---------- legend ---------- */
+$("legend").innerHTML = CATS.map(c => `<span class="chip"><i style="background:${c.color}"></i>${c.name}</span>`).join("");
+
+/* ---------- die ---------- */
+const PIPS = {1:[4],2:[0,8],3:[0,4,8],4:[0,2,6,8],5:[0,2,4,6,8],6:[0,2,3,5,6,8]};
+function showDie(n){ $("die").innerHTML = Array.from({length:9}, (_, i) => `<span class="${PIPS[n].includes(i) ? "on" : ""}"></span>`).join(""); }
+showDie(1);
+
+/* ---------- board ---------- */
+function cellPos(i){ const row = Math.floor(i / 6); const col = row % 2 === 0 ? i % 6 : 5 - (i % 6); return {row: row + 1, col: col + 1}; }
+function renderBoard(){
+  const b = $("board");
+  b.innerHTML = squares.map((s, i) => {
+    const p = cellPos(i);
+    let cls = "sq", style = `grid-row:${p.row};grid-column:${p.col};`, lbl = "";
+    if (s.type === "start"){ cls += " start"; lbl = "Inicio"; }
+    else if (s.type === "meta"){ cls += " meta"; lbl = "Meta: proyecto de vida"; }
+    else if (s.type === "magis"){ cls += " special"; lbl = "Magis: avanza 2"; }
+    else if (s.type === "tropiezo"){ cls += " special"; lbl = "Tropiezo: retrocede 2"; }
+    else { style += `background:${CATS[s.cat].color};`; lbl = CATS[s.cat].short; }
+    const here = state.players.map((pl, k) => pl.pos === i ? `<span class="piece" style="background:${pl.color}" title="${esc(pl.name)}">${esc(pl.name.charAt(0).toUpperCase())}</span>` : "").join("");
+    return `<div class="${cls}" style="${style}"><span class="n">${i}</span><div class="pieces">${here}</div><span class="lbl">${lbl}</span></div>`;
+  }).join("");
+}
+
+/* ---------- panel ---------- */
+function renderPanel(){
+  const p = state.players[state.cur];
+  $("who").textContent = p ? p.name : "";
+  $("who").style.color = p ? p.color : "";
+  $("score").innerHTML = state.players.map((pl, k) => `
+    <div class="prow ${k === state.cur && !state.over ? "active" : ""}">
+      <span class="piece" style="background:${pl.color}">${esc(pl.name.charAt(0).toUpperCase())}</span>
+      <div><div class="nm">${esc(pl.name)}</div>
+        <div class="tokens">${CATS.map((c, ci) => `<i title="${c.name}" style="border-color:${c.color};background:${pl.tokens.has(ci) ? c.color : "transparent"}"></i>`).join("")}</div>
+      </div>
+      <span class="pts">${pl.pts}</span>
+    </div>`).join("");
+  $("roll").disabled = state.busy || state.over;
+}
+function render(){ renderBoard(); renderPanel(); }
+function log(t){ $("log").textContent = t; }
+
+/* ---------- movement ---------- */
+async function moveBy(pl, steps){
+  const dir = steps > 0 ? 1 : -1;
+  for (let k = 0; k < Math.abs(steps); k++){
+    const next = pl.pos + dir;
+    if (next < 0 || next > LAST) break;
+    pl.pos = next;
+    renderBoard();
+    await sleep(reduced ? 0 : 170);
+  }
+}
+
+async function roll(){
+  if (state.busy || state.over) return;
+  state.busy = true; renderPanel();
+  const die = $("die");
+  if (!reduced){
+    die.classList.add("rolling");
+    for (let k = 0; k < 8; k++){ showDie(1 + Math.floor(Math.random() * 6)); await sleep(70); }
+    die.classList.remove("rolling");
+  }
+  const v = 1 + Math.floor(Math.random() * 6);
+  showDie(v);
+  const pl = state.players[state.cur];
+  await moveBy(pl, v);
+  await resolve(pl, v, true);
+}
+
+async function resolve(pl, v, allowSpecial){
+  const s = squares[pl.pos];
+  const tirada = v ? `${pl.name} sacó ${v}` : pl.name;
+  if (s.type === "meta"){ log(`${tirada} y llegó a la meta.`); return endGame(pl); }
+  if (s.type === "cat"){ log(`${tirada} y cayó en ${CATS[s.cat].name}.`); return showCard(pl, s.cat); }
+  if (allowSpecial && s.type === "magis"){
+    log(`${tirada} y cayó en Magis: avanza 2 casillas.`);
+    await sleep(reduced ? 0 : 500);
+    await moveBy(pl, 2);
+    return resolve(pl, 0, false);
+  }
+  if (allowSpecial && s.type === "tropiezo"){
+    log(`${tirada} y cayó en Tropiezo: retrocede 2 casillas.`);
+    await sleep(reduced ? 0 : 500);
+    await moveBy(pl, -2);
+    return resolve(pl, 0, false);
+  }
+  log(`${tirada}. Sigue el siguiente turno.`);
+  nextTurn();
+}
+
+function nextTurn(){
+  state.cur = (state.cur + 1) % state.players.length;
+  state.busy = false;
+  render();
+}
+
+/* ---------- cards ---------- */
+function openModal(html){ $("card").innerHTML = html; $("overlay").classList.remove("hidden"); const f = $("card").querySelector("button"); if (f) f.focus(); }
+function closeModal(){ $("overlay").classList.add("hidden"); $("card").innerHTML = ""; }
+
+function showCard(pl, cat){
+  const c = CATS[cat], card = draw(cat);
+  const head = `<div class="head" style="background:${c.color}"><h3>${c.name}</h3><span>${card.r ? "Reflexión" : "Pregunta"}</span></div>`;
+  if (card.r){
+    openModal(`${head}<div class="body">
+      <p class="muted">${esc(pl.name)}, responde en voz alta:</p>
+      <p class="q">${esc(card.q)}</p>
+      <p class="muted">El grupo decide si la respuesta fue sincera y completa.</p>
+      <div class="actions">
+        <button class="btn accent" id="rYes" type="button">Buena reflexión (+2)</button>
+        <button class="btn ghost" id="rNo" type="button">Le faltó (0)</button>
+      </div></div>`);
+    $("rYes").onclick = () => { pl.pts += 2; pl.tokens.add(cat); log(`${pl.name} ganó 2 puntos y la ficha de ${c.short}.`); closeModal(); nextTurn(); };
+    $("rNo").onclick = () => { log(`${pl.name} no sumó puntos esta vez.`); closeModal(); nextTurn(); };
+    return;
+  }
+  const order = shuffle(card.o.map((t, i) => ({t, i})));
+  openModal(`${head}<div class="body">
+    <p class="q">${esc(card.q)}</p>
+    <div class="opts">${order.map(o => `<button class="opt" type="button" data-i="${o.i}">${esc(o.t)}</button>`).join("")}</div>
+    <div id="fb"></div></div>`);
+  $("card").querySelectorAll(".opt").forEach(btn => btn.onclick = () => {
+    const pick = Number(btn.dataset.i), ok = pick === card.a;
+    $("card").querySelectorAll(".opt").forEach(b => { b.disabled = true; const i = Number(b.dataset.i); if (i === card.a) b.classList.add("ok"); else if (i === pick) b.classList.add("bad"); });
+    $("fb").innerHTML = `<p class="feedback"><b>${ok ? "¡Correcto! +2 puntos" : "Incorrecto, retrocedes 1 casilla"}</b>${esc(card.e)}</p>
+      <div class="actions" style="margin-top:12px"><button class="btn accent" id="cont" type="button">Continuar</button></div>`;
+    $("cont").focus();
+    $("cont").onclick = async () => {
+      closeModal();
+      if (ok){ pl.pts += 2; pl.tokens.add(cat); log(`${pl.name} acertó y ganó la ficha de ${c.short}.`); }
+      else { await moveBy(pl, -1); log(`${pl.name} falló y regresó a la casilla ${pl.pos}.`); }
+      nextTurn();
+    };
+  });
+}
+
+/* ---------- end ---------- */
+function endGame(winnerToMeta){
+  state.over = true; state.busy = false;
+  const rows = state.players.map(pl => {
+    const bonusMeta = pl === winnerToMeta ? 3 : 0;
+    const bonusTok = pl.tokens.size;
+    return {pl, total: pl.pts + bonusMeta + bonusTok, bonusMeta, bonusTok};
+  }).sort((a, b) => b.total - a.total);
+  render();
+  const top = rows[0].total;
+  const winners = rows.filter(r => r.total === top).map(r => r.pl.name);
+  const gift = "Gracias por jugar El Camino del Ser. Ojalá te lleves algo más que puntos: conocerte un poco mejor y recordar que crecemos en todas nuestras dimensiones y junto a los demás. “En todo amar y servir.”";
+  openModal(`<div class="head" style="background:var(--ink)"><h3>Fin de la partida</h3><span>${winners.length > 1 ? "Empate" : "Ganador"}</span></div>
+    <div class="body">
+      <p class="q">${winners.length > 1 ? "Empate entre " + winners.map(esc).join(" y ") : "¡Ganó " + esc(winners[0]) + "!"}</p>
+      <div class="final-list">${rows.map(r => `
+        <div class="prow"><span class="piece" style="background:${r.pl.color}">${esc(r.pl.name.charAt(0).toUpperCase())}</span>
+          <div><div class="nm">${esc(r.pl.name)}</div><div class="muted">${r.pl.pts} de tarjetas + ${r.bonusTok} por fichas${r.bonusMeta ? " + 3 por llegar a la meta" : ""}</div></div>
+          <span class="pts">${r.total}</span></div>`).join("")}</div>
+      <div class="gift">
+        <span class="muted">Un detalle para ti</span>
+        <span class="big">“En todo amar y servir”</span>
+        <span id="giftText">${esc(gift)}</span>
+        <div class="actions" style="justify-content:center"><button class="btn ghost" id="copyGift" type="button">Copiar mensaje</button></div>
+      </div>
+      <div class="actions"><button class="btn accent" id="again" type="button">Jugar de nuevo</button></div>
+    </div>`);
+  $("copyGift").onclick = async () => {
+    try { await navigator.clipboard.writeText(gift); $("copyGift").textContent = "Mensaje copiado"; }
+    catch(e){ $("copyGift").textContent = "Selecciona el texto para copiarlo"; }
+  };
+  $("again").onclick = () => { closeModal(); startGame(state.players.map(p => p.name)); };
+}
+
+/* ---------- setup ---------- */
+function startGame(names){
+  state.players = names.map((n, k) => ({name:n, color:PLAYER_COLORS[k], pos:0, pts:0, tokens:new Set()}));
+  state.cur = 0; state.busy = false; state.over = false; state.decks = [];
+  $("intro").classList.add("hidden");
+  $("game").classList.remove("hidden");
+  showDie(1);
+  log(`Empieza ${state.players[0].name}. Tira el dado.`);
+  render();
+}
+$("setup").addEventListener("submit", e => {
+  e.preventDefault();
+  const names = ["p1","p2","p3","p4"].map(id => $(id).value.trim()).filter(Boolean);
+  if (names.length < 2){ $("err").textContent = "Escribe al menos dos nombres para jugar."; return; }
+  $("err").textContent = "";
+  startGame(names);
+});
+$("roll").addEventListener("click", roll);
+$("restart").addEventListener("click", () => {
+  closeModal();
+  state.players = []; state.busy = false; state.over = false;
+  $("game").classList.add("hidden");
+  $("intro").classList.remove("hidden");
+});
+</script>
+</body>
+</html>
